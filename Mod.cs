@@ -83,58 +83,107 @@ namespace Polygamy
                 }
                 if(!taken) NPCs.Add(n);
             }
-            Monitor.Log("Found " + NPCs.Count + " poly marriage candidates.");
+            Monitor.Log("Found " + NPCs.Count + " polygamy marriage candidates.");
 
             //pick a random spouse for me today
             if (PolyData.PolySpouses.ContainsKey(Game1.player.UniqueMultiplayerID))
             {
-                Random rng = new Random(DateTime.Now.Millisecond);
-                //pick a random
-                var nextSpouse = PolyData.PolySpouses[Game1.player.UniqueMultiplayerID][rng.Next(PolyData.PolySpouses[Game1.player.UniqueMultiplayerID].Count)];
-                var lastSpouse = Game1.player.spouse;
-                PolyData.PolySpouses[Game1.player.UniqueMultiplayerID].Remove(nextSpouse);
-                if(lastSpouse != null) PolyData.PolySpouses[Game1.player.UniqueMultiplayerID].Add(lastSpouse);
-                Monitor.Log("Poly spouse roll of the day: " + nextSpouse);
-                Game1.player.spouse = nextSpouse; //HOTSWAP
-                (Game1.getLocationFromName(Game1.player.homeLocation.Value) as StardewValley.Locations.FarmHouse).owner.spouse = nextSpouse;
-
-                PolyData.PrimarySpouse = nextSpouse;
-                Utility.getHomeOfFarmer(Game1.player).showSpouseRoom();
-                Game1.getFarm().addSpouseOutdoorArea(Game1.player.spouse);
-                //npc.isBirthday - maybe we sohuld guarantee birthday spouses
-                //bring the others into the house
-                NPC mainSpouse = Game1.getCharacterFromName(Game1.player.spouse);
-                //place main spouse
-                var mainSpouseBedSpot = (Game1.getLocationFromName(Game1.player.homeLocation.Value) as StardewValley.Locations.FarmHouse).getSpouseBedSpot();
-                mainSpouse.setTileLocation(new Vector2(mainSpouseBedSpot.X, mainSpouseBedSpot.Y));
-
+                List<string> spouseNames = new List<string>(PolyData.PolySpouses[Game1.player.UniqueMultiplayerID].ToArray());
+                //check for birthday spouse
+                bool birthday = false;
+                string actualSpouseForToday = null;
+                for (int i = 0; i < spouseNames.Count; i++)
+                {
+                    var testBday = Game1.getCharacterFromName(spouseNames[i], true);
+                    if (testBday.isBirthday(Game1.currentSeason, Game1.dayOfMonth))
+                    {
+                        birthday = true;
+                        actualSpouseForToday = spouseNames[i];
+                    }
+                }
+                if (!birthday)
+                {
+                    //pick a random
+                    actualSpouseForToday = spouseNames[ModUtil.RNG.Next(spouseNames.Count)];
+                }
+                //put yesterday's spouse in the bed
+                var actualSpouseYesterday = Game1.player.spouse;
+                if (actualSpouseYesterday != null)
+                {
+                    var bedSpawn = (Game1.getLocationFromName(Game1.player.homeLocation.Value) as StardewValley.Locations.FarmHouse).getSpouseBedSpot();
+                    ModUtil.WarpNPC(Game1.getCharacterFromName(actualSpouseYesterday), Game1.player.homeLocation.Value, bedSpawn);
+                }
+                //take new spouse out of poly spouses
+                if (actualSpouseForToday != null)
+                {
+                    Monitor.Log("'Actual' spouse today: " + actualSpouseForToday);
+                    PolyData.PolySpouses[Game1.player.UniqueMultiplayerID].Remove(actualSpouseForToday);
+                    Game1.player.spouse = actualSpouseForToday;
+                    PolyData.PrimarySpouse = actualSpouseForToday;
+                    Utility.getHomeOfFarmer(Game1.player).showSpouseRoom();
+                    Game1.getFarm().addSpouseOutdoorArea(Game1.player.spouse);
+                    NPC actualSpouse = Game1.getCharacterFromName(actualSpouseForToday);
+                    var kitchenSpawn = (Game1.getLocationFromName(Game1.player.homeLocation.Value) as StardewValley.Locations.FarmHouse).getKitchenStandingSpot();
+                    ModUtil.WarpNPC(actualSpouse, Game1.player.homeLocation.Value, kitchenSpawn);
+                }
+                //distribute remaining spouses
                 foreach (var otherSpouseName in PolyData.PolySpouses[Game1.player.UniqueMultiplayerID])
                 {
                     NPC otherSpouse = Game1.getCharacterFromName(otherSpouseName);
-                    otherSpouse.currentLocation = mainSpouse.currentLocation;
                     //find a free tile to position them on
-                    GameLocation l = mainSpouse.currentLocation;
-                    if (l is StardewValley.Locations.FarmHouse) //has wonky collision
+                    GameLocation l = Game1.player.currentLocation;
+                    var p = FindSpotForNPC(l, l is StardewValley.Locations.FarmHouse);
+                    if(p != Point.Zero)
                     {
-                        var lfh = l as StardewValley.Locations.FarmHouse;
-                        var p = lfh.getRandomOpenPointInHouse(rng, 1, 50);
-                        otherSpouse.setTilePosition((int)p.X, (int)p.Y);
-                        Monitor.Log("Placed " + otherSpouse.Name + " at " + p.X + ", " + p.Y);
-                    } 
-                    else //no clue where we're sleeping. but let's roll with it.
-                    {
-                        for (int num = 50; num > 0; num--) //50 tries to place this spouse
-                        {
-                            var spouseSpawnPos = new Vector2(rng.Next(5, l.map.GetLayer("Back").TileWidth - 4), rng.Next(5, l.map.GetLayer("Back").TileHeight - 4));
-                            if (l.isTileLocationTotallyClearAndPlaceable(spouseSpawnPos) && l.isCharacterAtTile(spouseSpawnPos) == null)
-                            {
-                                otherSpouse.setTilePosition((int)spouseSpawnPos.X, (int)spouseSpawnPos.Y);
-                                Monitor.Log("Placed " + otherSpouse.Name + " at " + (int)spouseSpawnPos.X + ", " + (int)spouseSpawnPos.Y);
-                            }
-                        }
+                        ModUtil.WarpNPC(otherSpouse, l, p);
                     }
                 }
+                //add yesterday's spouse back to poly spouses
+                if (actualSpouseYesterday != null) PolyData.PolySpouses[Game1.player.UniqueMultiplayerID].Add(actualSpouseYesterday);
             }
+        }
+
+        public List<Rectangle> GetVanillaHouseWallRects()
+        {
+            List<Rectangle> list = new List<Rectangle>();
+            switch (Game1.player.HouseUpgradeLevel)
+            {
+                case 0:
+                    list.Add(new Rectangle(1, 1, 10, 3));
+                    break;
+                case 1:
+                    list.Add(new Rectangle(1, 1, 17, 3));
+                    list.Add(new Rectangle(18, 6, 2, 2));
+                    list.Add(new Rectangle(20, 1, 9, 3));
+                    break;
+                case 2:
+                case 3:
+                    list.Add(new Rectangle(1, 1, 12, 3));
+                    list.Add(new Rectangle(15, 1, 13, 3));
+                    list.Add(new Rectangle(13, 3, 2, 2));
+                    list.Add(new Rectangle(1, 10, 10, 3));
+                    list.Add(new Rectangle(13, 10, 8, 3));
+                    list.Add(new Rectangle(21, 15, 2, 2));
+                    list.Add(new Rectangle(23, 10, 11, 3));
+                    break;
+            }
+            return list;
+        }
+
+        public Point FindSpotForNPC(GameLocation l, bool checkVanillaHouseWalls)
+        {
+            Point randomPoint = Point.Zero;
+            for (int i = 0; i < 100; i++)
+            {
+                int sizeX = l.map.GetLayer("Back").TileWidth;
+                int sizeY = l.map.GetLayer("Back").TileHeight;
+                randomPoint = new Point(ModUtil.RNG.Next(sizeX), ModUtil.RNG.Next(sizeY));
+                bool unacceptable = false;
+                unacceptable = (l.getTileIndexAt(randomPoint.X, randomPoint.Y, "Back") == -1 || !l.isTileLocationTotallyClearAndPlaceable(randomPoint.X, randomPoint.Y) || (checkVanillaHouseWalls && Utility.pointInRectangles(GetVanillaHouseWallRects(), randomPoint.X, randomPoint.Y)));
+                //Monitor.Log("Testing position: " + randomPoint.X + " , " + randomPoint.Y + " : " + unacceptable);
+                if (!unacceptable) return randomPoint;
+            }
+            return Point.Zero;
         }
 
         private void Input_ButtonPressed(object sender, ButtonPressedEventArgs e)
