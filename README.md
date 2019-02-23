@@ -1,2 +1,2 @@
-# SDV-Lockpicks
-A Stardew Valley mod for criminals. Now you can see them outside of visiting hours.
+# SDV-Polygamy
+A Stardew Valley mod for people with extra love to give.
