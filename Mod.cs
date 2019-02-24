@@ -206,31 +206,32 @@ namespace Polygamy
             //update poly spouses, don't leave them stagnant
             foreach (var spouse in PolyData.PolySpouses[Game1.player.UniqueMultiplayerID])
             {
-                if (ModUtil.RNG.Next(4) == 1)
+                if (ModUtil.RNG.Next(7) == 1)
                 {
                     NPC spouseNpc = Game1.getCharacterFromName(spouse);
                     GameLocation l = spouseNpc.currentLocation;
                     bool warped = false;
-                    if(l.farmers.Count == 0)//noone's looking. we could move them to an adjacent map.
+                    if(l.farmers.Count == 0) //noone's looking. we could move them to an adjacent map.
                     {
-                        if (ModUtil.RNG.Next(3) == 0)
+                        if (ModUtil.RNG.Next(5) == 0)
                         {
                             Warp w = l.warps[ModUtil.RNG.Next(l.warps.Count)];
-                            ModUtil.WarpNPC(spouseNpc, w.TargetName, new Point(w.TargetX, w.TargetY));
-                            l = spouseNpc.currentLocation;
-                            warped = true;
-                            //spouseNpc.ignoreScheduleToday = true;
-                            //spouseNpc.followSchedule = false;
-                            //spouseNpc.clearSchedule();
+                            GameLocation l2 = Game1.getLocationFromName(w.TargetName);
+                            if (l2.farmers.Count == 0) //but only if we're not looking here either. have to skip the NPCBarriers.
+                            {
+                                l.characters.Remove(spouseNpc);
+                                l2.addCharacterAtRandomLocation(spouseNpc);
+                                Monitor.Log(spouseNpc.Name + " moved to " + l2.Name);
+                                l = spouseNpc.currentLocation;
+                                warped = true;
+                            }
                         }
                     }
                     var p = FindSpotForNPC(l, l is StardewValley.Locations.FarmHouse, spouseNpc.getTileLocationPoint(), warped ? 8 : 0);
                     if (p != Point.Zero)
                     {
-                        //Monitor.Log("Pathing " + spouse + " to " + p.ToString());
                         spouseNpc.willDestroyObjectsUnderfoot = false;
                         spouseNpc.controller = new PathFindController(spouseNpc, l, new Point((int)p.X, (int)p.Y), -1, OnSpouseWalkComplete, 100);
-                        //WHY THIS NO WORK AFTER WARP?!
                     }
                 }
             }
