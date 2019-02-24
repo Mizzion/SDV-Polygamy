@@ -206,14 +206,14 @@ namespace Polygamy
             //update poly spouses, don't leave them stagnant
             foreach (var spouse in PolyData.PolySpouses[Game1.player.UniqueMultiplayerID])
             {
-                if (ModUtil.RNG.Next(3) == 1)
+                if (ModUtil.RNG.Next(4) == 1)
                 {
                     NPC spouseNpc = Game1.getCharacterFromName(spouse);
                     GameLocation l = spouseNpc.currentLocation;
                     bool warped = false;
                     if(l.farmers.Count == 0)//noone's looking. we could move them to an adjacent map.
                     {
-                        if (ModUtil.RNG.Next(1) == 0) //1 in 5 chance to proc on a 1 in 10 chance to proc. so 1 in 50.
+                        if (ModUtil.RNG.Next(3) == 0)
                         {
                             Warp w = l.warps[ModUtil.RNG.Next(l.warps.Count)];
                             ModUtil.WarpNPC(spouseNpc, w.TargetName, new Point(w.TargetX, w.TargetY));
@@ -227,7 +227,7 @@ namespace Polygamy
                     var p = FindSpotForNPC(l, l is StardewValley.Locations.FarmHouse, spouseNpc.getTileLocationPoint(), warped ? 8 : 0);
                     if (p != Point.Zero)
                     {
-                        Monitor.Log("Pathing " + spouse + " to " + p.ToString());
+                        //Monitor.Log("Pathing " + spouse + " to " + p.ToString());
                         spouseNpc.willDestroyObjectsUnderfoot = false;
                         spouseNpc.controller = new PathFindController(spouseNpc, l, new Point((int)p.X, (int)p.Y), -1, OnSpouseWalkComplete, 100);
                         //WHY THIS NO WORK AFTER WARP?!
@@ -338,7 +338,6 @@ namespace Polygamy
                     {
                         if (Game1.player.spouse != null) //we only need polygamy for second+ spouse
                         {
-                            Monitor.Log("ATTEMPTING MARRY");
                             var target = ModUtil.GetLocalPlayerFacingTileCoordinate();
                             var key = Game1.currentLocation.Name + "." + target[0] + "." + target[1];
                             //check if npc is in front of player
@@ -371,7 +370,8 @@ namespace Polygamy
                                 PolyData.PrimarySpouse = tnpc.Name;
                                 tnpc.CurrentDialogue.Clear();
                                 tnpc.CurrentDialogue.Push(new Dialogue(Game1.content.Load<Dictionary<string, string>>("Data\\EngagementDialogue")[tnpc.Name + "0"], tnpc));
-                                //CurrentDialogue.Push(new Dialogue(Game1.content.LoadString("Strings\\StringsFromCSFiles:NPC.cs.3980"), this));
+                                tnpc.CurrentDialogue.Push(new Dialogue(Game1.content.Load<Dictionary<string, string>>("Data\\EngagementDialogue")[tnpc.Name + "1"], tnpc));
+                                //tnpc.CurrentDialogue.Push(new Dialogue(Game1.content.LoadString("Strings\\StringsFromCSFiles:NPC.cs.3980"), tnpc));
                                 Game1.player.reduceActiveItemByOne();
                                 Game1.player.completelyStopAnimatingOrDoingAction();
                                 Game1.drawDialogue(tnpc);
