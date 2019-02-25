@@ -9,8 +9,8 @@
 	"Dependencies": [
 		{
 			"UniqueID": "bwdyworks",
-			"MinimumVersion": "0.1.0"
+			"MinimumVersion": "0.3.0"
 		}
 	],
-	"UpdateKeys": [ "Nexus:0" ]
+	"UpdateKeys": [ "Nexus:3542" ]
 }

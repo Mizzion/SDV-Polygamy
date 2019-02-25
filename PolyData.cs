@@ -8,14 +8,11 @@ namespace Polygamy
 {
     public class PolyData
     {
-        public Dictionary<long, List<string>> PolySpouses;
-        public Dictionary<long, List<string>> PolyDates;
+        public Dictionary<long, HashSet<string>> PolySpouses;
+        public Dictionary<long, HashSet<string>> PolyDates;
+        public Dictionary<long, HashSet<string>> PolyDivorces;
+        public Dictionary<long, Dictionary<string, bwdyworks.GameDate>> PolyEngagements;
         public string PrimarySpouse;
-
-        public PolyData()
-        {
-            PolySpouses = new Dictionary<long, List<string>>();
-            PolyDates = new Dictionary<long, List<string>>();
-        }
+        public string TomorrowSpouse;
     }
 }

@@ -54,6 +54,7 @@
     <Compile Include="Mod.cs" />
     <Compile Include="PolyData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Relationships.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="manifest.json" />
@@ -61,11 +62,6 @@
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\packages\Pathoschild.Stardew.ModBuildConfig.2.2.0\analyzers\dotnet\cs\StardewModdingAPI.ModBuildConfig.Analyzer.dll" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Assets\lockpick.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SDV-bwdyworks\bwdyworks.csproj">
