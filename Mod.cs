@@ -4,19 +4,17 @@ using StardewModdingAPI.Events;
 using System.Collections.Generic;
 using System;
 using Microsoft.Xna.Framework;
+using Modworks = bwdyworks.Modworks;
 using System.Linq;
 
 namespace Polygamy
 {
     public class Mod : StardewModdingAPI.Mod
     {
-#if DEBUG
-        private static readonly bool DEBUG = true;
-#else
-        private static readonly bool DEBUG = false;
-#endif
-        public static Mod Instance;
-        public static bwdyworks.ModUtil ModUtil;
+        internal static bool Debug = false;
+        [System.Diagnostics.Conditional("DEBUG")]
+        public void EntryDebug() { Debug = true; }
+        internal static string Module;
 
         public static Relationships Relationships;
 
@@ -24,20 +22,19 @@ namespace Polygamy
 
         public override void Entry(IModHelper helper)
         {
-            ModUtil = new bwdyworks.ModUtil(this);
-            Instance = this;
-            if(ModUtil.StartConfig(DEBUG))
-            {
-                Relationships = new Relationships();
-                helper.Events.Input.ButtonPressed += Input_ButtonPressed;
-                helper.Events.GameLoop.DayStarted += GameLoop_DayStarted;
-                helper.Events.GameLoop.Saving += GameLoop_Saving;
-                helper.Events.GameLoop.SaveLoaded += GameLoop_SaveLoaded;
-                helper.Events.GameLoop.TimeChanged += GameLoop_TimeChanged;
-                Relationships = new Relationships();
-                helper.ConsoleCommands.Add("polygamy", "'polygamy help' for more info", PolygamyCommand);
-                ModUtil.EndConfig();
-            }
+            Module = helper.ModRegistry.ModID;
+            EntryDebug();
+            if (!Modworks.InstallModule(Module, Debug)) return;
+
+            Relationships = new Relationships();
+            helper.Events.Input.ButtonPressed += Input_ButtonPressed;
+            helper.Events.GameLoop.DayStarted += GameLoop_DayStarted;
+            helper.Events.GameLoop.Saving += GameLoop_Saving;
+            helper.Events.GameLoop.SaveLoaded += GameLoop_SaveLoaded;
+            helper.Events.GameLoop.TimeChanged += GameLoop_TimeChanged;
+            Relationships = new Relationships();
+            helper.ConsoleCommands.Add("polygamy", "'polygamy help' for more info", PolygamyCommand);
+
         }
 
         public void PolygamyCommand(string command, string[] parameters)
@@ -45,7 +42,7 @@ namespace Polygamy
             if(parameters.Length < 2 || parameters[0] == "help")
             {
                 var exampleNames = new[] { "Pierre", "Robin", "Sandy", "Pam", "Jodi", "Kent", "Caroline", "Clint", "Evelyn", "Gus", "Demetrius", "Lewis", "Marnie", "Wizard" };
-                string exampleName = exampleNames[ModUtil.RNG.Next(exampleNames.Length)];
+                string exampleName = exampleNames[Modworks.RNG.Next(exampleNames.Length)];
                 Monitor.Log($"Polygamy commands:\npolygamy flirt {exampleName} - would make '{exampleName}' a dateable NPC.\npolygamy unflirt {exampleName} - would make '{exampleName}' no longer dateable.\npolygamy roll {exampleName} - would make '{exampleName}' your 'official' spouse tomorrow\npolygamy marry {exampleName} - would immediately start a wedding with '{exampleName}'\npolygamy date {exampleName} - would make '{exampleName}' date you\npolygamy breakup {exampleName} - would make '{exampleName}' no longer dating you\npolygamy divorce {exampleName} - would, well, divorce '{exampleName}'\npolygamy undivorce {exampleName} - would make '{exampleName}' forget they were ever married to you", LogLevel.Info);
                 return;
             }
@@ -139,18 +136,18 @@ namespace Polygamy
         private void GameLoop_SaveLoaded(object sender, SaveLoadedEventArgs e)
         {
 
-            Relationships.PolyData = Mod.Instance.Helper.Data.ReadJsonFile<PolyData>("Saves/polySpouse." + Constants.SaveFolderName + ".json");
+            Relationships.PolyData = Helper.Data.ReadJsonFile<PolyData>("Saves/polySpouse." + Constants.SaveFolderName + ".json");
             if (Relationships.PolyData == null)
             {
                 Relationships.PolyData = new PolyData();
             }
-            else Mod.Instance.Monitor.Log("Polygamy loaded.");
+            else Monitor.Log("Polygamy loaded.");
         }
 
         private void GameLoop_Saving(object sender, SavingEventArgs e)
         {
-            Mod.Instance.Monitor.Log("Polygamy saved.");
-            Mod.Instance.Helper.Data.WriteJsonFile("Saves/polySpouse." + Constants.SaveFolderName + ".json", Relationships.PolyData);
+            Monitor.Log("Polygamy saved.");
+            Helper.Data.WriteJsonFile("Saves/polySpouse." + Constants.SaveFolderName + ".json", Relationships.PolyData);
         }
 
         private void GameLoop_DayStarted(object sender, DayStartedEventArgs e)
@@ -174,14 +171,14 @@ namespace Polygamy
 
                 //put the primary in the kitchen (seems this is the only way to get the primary's schedule to fire? wtf?)
                 var kitchenSpot = (Game1.getLocationFromName(Game1.player.homeLocation.Value) as StardewValley.Locations.FarmHouse).getKitchenStandingSpot();
-                ModUtil.WarpNPC(nextPrimarySpouse, farmHouseName, kitchenSpot);
+                Modworks.NPCs.Warp(nextPrimarySpouse, farmHouseName, kitchenSpot);
                 FixSpouseSchedule(Game1.getLocationFromName(Game1.player.homeLocation.Value), nextPrimarySpouse);
 
                 //if previous isn't null, stick them in bed with the player
                 var bedSpot = (Game1.getLocationFromName(Game1.player.homeLocation.Value) as StardewValley.Locations.FarmHouse).getSpouseBedSpot();
                 if (lastPrimarySpouse != null)
                 {
-                    ModUtil.WarpNPC(lastPrimarySpouse, farmHouseName, bedSpot);
+                    Modworks.NPCs.Warp(lastPrimarySpouse, farmHouseName, bedSpot);
                     FixSpouseSchedule(Game1.getLocationFromName(Game1.player.homeLocation.Value), lastPrimarySpouse, true);
                 }
 
@@ -193,21 +190,21 @@ namespace Polygamy
                     {
                         //if (lastPrimarySpouse != null && spouseName == lastPrimarySpouse.Name) continue;
                         //random dogpile in bed
-                        if (ModUtil.RNG.Next(100) < Math.Max(100 - Relationships.Spouses.Count * 7, 3))
+                        if (Modworks.RNG.Next(100) < Math.Max(100 - Relationships.Spouses.Count * 7, 3))
                         {
                             var npcObject = Game1.getCharacterFromName(spouseName);
-                            ModUtil.WarpNPC(npcObject, farmHouseName, (Game1.getLocationFromName(farmHouseName) as StardewValley.Locations.FarmHouse).getBedSpot());
+                            Modworks.NPCs.Warp(npcObject, farmHouseName, (Game1.getLocationFromName(farmHouseName) as StardewValley.Locations.FarmHouse).getBedSpot());
                             Monitor.Log("putting " + spouseName + " in bed (player side)");
                             var pos = npcObject.Position;
-                            pos.X += (float)(-32f + ModUtil.RNG.NextDouble() * 96f); //vary the position
+                            pos.X += (float)(-32f + Modworks.RNG.NextDouble() * 96f); //vary the position
                             npcObject.Position = pos;
-                        } else if (ModUtil.RNG.Next(100) < Math.Max(100 - Relationships.Spouses.Count * 7, 3))
+                        } else if (Modworks.RNG.Next(100) < Math.Max(100 - Relationships.Spouses.Count * 7, 3))
                         {
                             var npcObject = Game1.getCharacterFromName(spouseName);
-                            ModUtil.WarpNPC(npcObject, farmHouseName, bedSpot);
+                            Modworks.NPCs.Warp(npcObject, farmHouseName, bedSpot);
                             Monitor.Log("putting " + spouseName + " in bed (spouse side)");
                             var pos = npcObject.Position;
-                            pos.X += (float)(-32f + ModUtil.RNG.NextDouble() * 96f); //vary the position
+                            pos.X += (float)(-32f + Modworks.RNG.NextDouble() * 96f); //vary the position
                             npcObject.Position = pos;
                         }
                         else //or around the house at random
@@ -219,7 +216,7 @@ namespace Polygamy
                             var p = FindSpotForNPC(l, l is StardewValley.Locations.FarmHouse, otherSpouseNPC.getTileLocationPoint());
                             if (p != Point.Zero)
                             {
-                                ModUtil.WarpNPC(otherSpouseNPC, l, p);
+                                Modworks.NPCs.Warp(otherSpouseNPC, l, p);
                             }
                             //and fix their schedule
                             FixSpouseSchedule(l, otherSpouseNPC, true);
@@ -253,10 +250,10 @@ namespace Polygamy
             {
                 npc.DefaultPosition = new Vector2(npc.getTileX() * 64, npc.getTileY() * 64);
                 npc.DefaultMap = npc.currentLocation.Name;
-                if (ModUtil.RNG.Next(2) == 1)
+                if (Modworks.RNG.Next(2) == 1)
                 {
                     var p = FindSpotForNPC(l, l is StardewValley.Locations.FarmHouse, npc.getTileLocationPoint());
-                    npc.controller = new PathFindController(npc, l, new Point(p.X, p.Y), ModUtil.RNG.Next(4));
+                    npc.controller = new PathFindController(npc, l, new Point(p.X, p.Y), Modworks.RNG.Next(4));
                 }
             } else
             {
@@ -281,7 +278,7 @@ namespace Polygamy
             //update poly spouses, don't leave them stagnant
             foreach (var spouse in Relationships.PolyData.PolySpouses[Game1.player.UniqueMultiplayerID])
             {
-                if (ModUtil.RNG.Next(5) == 1)
+                if (Modworks.RNG.Next(5) == 1)
                 {
                     NPC spouseNpc = Game1.getCharacterFromName(spouse);
                     if (spouseNpc.currentLocation == null)
@@ -296,9 +293,9 @@ namespace Polygamy
                         bool warped = false;
                         if (l.farmers.Count == 0) //noone's looking. we could move them to an adjacent map.
                         {
-                            if (ModUtil.RNG.Next(3) == 0)
+                            if (Modworks.RNG.Next(3) == 0)
                             {
-                                Warp w = l.warps[ModUtil.RNG.Next(l.warps.Count)];
+                                Warp w = l.warps[Modworks.RNG.Next(l.warps.Count)];
                                 GameLocation l2 = Game1.getLocationFromName(w.TargetName);
                                 if (l2.farmers.Count == 0) //but only if we're not looking here either. have to skip the NPCBarriers.
                                 {
@@ -361,9 +358,9 @@ namespace Polygamy
                 int sizeX = l.map.GetLayer("Back").TileWidth;
                 int sizeY = l.map.GetLayer("Back").TileHeight;
                 if(radius > 0)
-                    randomPoint = new Point((p.X - radius) + ModUtil.RNG.Next(radius * 2), (p.Y - radius) + ModUtil.RNG.Next(radius * 2));
+                    randomPoint = new Point((p.X - radius) + Modworks.RNG.Next(radius * 2), (p.Y - radius) + Modworks.RNG.Next(radius * 2));
                 else
-                    randomPoint = new Point(ModUtil.RNG.Next(sizeX), ModUtil.RNG.Next(sizeY));
+                    randomPoint = new Point(Modworks.RNG.Next(sizeX), Modworks.RNG.Next(sizeY));
                 bool unacceptable = false;
                 unacceptable = (l.getTileIndexAt(randomPoint.X, randomPoint.Y, "Back") == -1 || !l.isTileLocationTotallyClearAndPlaceable(randomPoint.X, randomPoint.Y) || (checkVanillaHouseWalls && Utility.pointInRectangles(GetVanillaHouseWallRects(), randomPoint.X, randomPoint.Y)));
                 if (!unacceptable) return randomPoint;
@@ -378,7 +375,7 @@ namespace Polygamy
                 if (Context.IsPlayerFree)
                 {
                     //snag a list of the NPCs we are interested in
-                    var targetedNPCs = ModUtil.GetAllCharacterNames(true, false, Game1.player.currentLocation);
+                    var targetedNPCs = Modworks.NPCs.GetAllCharacterNames(true, false, Game1.player.currentLocation);
 
                     //let's play my favorite game: WHO ARE WE CLICKING
                     Vector2 actionPos = e.Cursor.GrabTile;
@@ -409,7 +406,7 @@ namespace Polygamy
                                                     return;
                                                 }
                                                 else { 
-                                                    if (ModUtil.GetFriendshipPoints(n2.Name) >= 2000) //ready for relationship!
+                                                    if (Modworks.Player.GetFriendshipPoints(n2.Name) >= 2000) //ready for relationship!
                                                     {
                                                         //LETTUCE DATE
                                                         Helper.Input.Suppress(e.Button);
@@ -463,14 +460,14 @@ namespace Polygamy
                                                     }
                                                     else
                                                     {
-                                                        if (ModUtil.GetFriendshipPoints(n2.Name) >= 2499) //ready for marriage!
+                                                        if (Modworks.Player.GetFriendshipPoints(n2.Name) >= 2499) //ready for marriage!
                                                         {
                                                             //LETTUCE MARRY
                                                             Helper.Input.Suppress(e.Button);
                                                             Game1.changeMusicTrack("none");
                                                             n2.CurrentDialogue.Clear();
                                                             Relationships.Engage(n2.Name);
-                                                            ModUtil.SetFriendshipPoints(n2.Name, 2500);
+                                                            Modworks.Player.SetFriendshipPoints(n2.Name, 2500);
                                                             Dialogue d1, d2, d3;
                                                             bool dialogueOk = Game1.content.Load<Dictionary<string, string>>("Data\\EngagementDialogue").ContainsKey(n2.Name + "0");
                                                             if (!dialogueOk)
@@ -522,8 +519,8 @@ namespace Polygamy
                     //to kiss (doesn't use normal grabTile target)
                     if (Game1.player.ActiveObject == null)
                     {
-                        var facingTarget = ModUtil.GetLocalPlayerFacingTileCoordinate();
-                        var standingTarget = ModUtil.GetLocalPlayerStandingTileCoordinate();
+                        var facingTarget = Modworks.Player.GetFacingTileCoordinate();
+                        var standingTarget = Modworks.Player.GetStandingTileCoordinate();
                         var key = Game1.currentLocation.Name + "." + facingTarget[0] + "." + facingTarget[1];
                         //check if npc is in front of player
                         foreach (string n in targetedNPCs)

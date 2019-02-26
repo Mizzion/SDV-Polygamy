@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Modworks = bwdyworks.Modworks;
 
 namespace Polygamy
 {
@@ -145,25 +146,25 @@ namespace Polygamy
 
         private bool CheckDivorcedProper(string NPC)
         {
-            if (Divorces.Contains(NPC) ^ Mod.ModUtil.GetFriendshipStatus(NPC) == FriendshipStatus.Divorced) Divorce(NPC); //fix desynced status
+            if (Divorces.Contains(NPC) ^ Modworks.Player.GetFriendshipStatus(NPC) == FriendshipStatus.Divorced) Divorce(NPC); //fix desynced status
             return Divorces.Contains(NPC);
         }
 
         private bool CheckMarriedProper(string NPC)
         {
-            if (Spouses.Contains(NPC) ^ Mod.ModUtil.GetFriendshipStatus(NPC) == FriendshipStatus.Married) Marry(NPC); //fix desynced status
+            if (Spouses.Contains(NPC) ^ Modworks.Player.GetFriendshipStatus(NPC) == FriendshipStatus.Married) Marry(NPC); //fix desynced status
             return Spouses.Contains(NPC);
         }
 
         private bool CheckEngagedProper(string NPC)
         {
-            if (Engagements.ContainsKey(NPC) ^ Mod.ModUtil.GetFriendshipStatus(NPC) == FriendshipStatus.Engaged) Engage(NPC); //fix desynced status
+            if (Engagements.ContainsKey(NPC) ^ Modworks.Player.GetFriendshipStatus(NPC) == FriendshipStatus.Engaged) Engage(NPC); //fix desynced status
             return Engagements.ContainsKey(NPC);
         }
 
         private bool CheckDatingProper(string NPC)
         {
-            if (Dates.Contains(NPC) ^ Mod.ModUtil.GetFriendshipStatus(NPC) == FriendshipStatus.Dating) Date(NPC); //fix desynced status
+            if (Dates.Contains(NPC) ^ Modworks.Player.GetFriendshipStatus(NPC) == FriendshipStatus.Dating) Date(NPC); //fix desynced status
             return Dates.Contains(NPC);
         }
 
@@ -191,8 +192,8 @@ namespace Polygamy
 
         public void Forget(string NPC, bool resetFriendship = true)
         {
-            if(resetFriendship) Mod.ModUtil.SetFriendshipPoints(NPC, 0);
-            Mod.ModUtil.SetFriendshipStatus(NPC, FriendshipStatus.Friendly);
+            if(resetFriendship) Modworks.Player.SetFriendshipPoints(NPC, 0);
+            Modworks.Player.SetFriendshipStatus(NPC, FriendshipStatus.Friendly);
             Spouses.Remove(NPC);
             Engagements.Remove(NPC);
             Divorces.Remove(NPC);
@@ -207,9 +208,9 @@ namespace Polygamy
         public void Date(string NPC)
         {
             SetDateable(NPC, true);
-            if (Mod.ModUtil.GetFriendshipPoints(NPC) < 2000)
-                Mod.ModUtil.SetFriendshipPoints(NPC, 2000);
-            Mod.ModUtil.SetFriendshipStatus(NPC, FriendshipStatus.Dating);
+            if (Modworks.Player.GetFriendshipPoints(NPC) < 2000)
+                Modworks.Player.SetFriendshipPoints(NPC, 2000);
+            Modworks.Player.SetFriendshipStatus(NPC, FriendshipStatus.Dating);
             Spouses.Remove(NPC);
             Engagements.Remove(NPC);
             Divorces.Remove(NPC);
@@ -225,11 +226,11 @@ namespace Polygamy
             {
                 weddingDay = bwdyworks.GameDate.CreateWeddingDate();
             }
-            Mod.Instance.Monitor.Log("Engaged to " + NPC + ", to be wed on " + weddingDay.GetSeasonString() + " " + weddingDay.Day);
+            Modworks.Log.Info("Engaged to " + NPC + ", to be wed on " + weddingDay.GetSeasonString() + " " + weddingDay.Day);
             StorePrimarySpouse();
-            if(Mod.ModUtil.GetFriendshipPoints(NPC) < 2500)
-                Mod.ModUtil.SetFriendshipPoints(NPC, 2500);
-            Mod.ModUtil.SetFriendshipStatus(NPC, FriendshipStatus.Engaged);
+            if(Modworks.Player.GetFriendshipPoints(NPC) < 2500)
+                Modworks.Player.SetFriendshipPoints(NPC, 2500);
+            Modworks.Player.SetFriendshipStatus(NPC, FriendshipStatus.Engaged);
             //Game1.player.spouse = NPC;
             Game1.player.friendshipData[NPC].Proposer = Game1.player.UniqueMultiplayerID;
             Game1.player.friendshipData[NPC].WeddingDate = new WorldDate(Game1.year, weddingDay.GetSeasonString().ToLower(), weddingDay.Day);
@@ -243,10 +244,10 @@ namespace Polygamy
         public void Marry(string NPC, bool wedding = false)
         {
             SetDateable(NPC, true);
-            if (Mod.ModUtil.GetFriendshipPoints(NPC) < 2500)
-                Mod.ModUtil.SetFriendshipPoints(NPC, 2500);
+            if (Modworks.Player.GetFriendshipPoints(NPC) < 2500)
+                Modworks.Player.SetFriendshipPoints(NPC, 2500);
             if (Game1.player.HouseUpgradeLevel < 2) Game1.player.HouseUpgradeLevel = 2; //prevent crash
-            Mod.ModUtil.SetFriendshipStatus(NPC, FriendshipStatus.Married);
+            Modworks.Player.SetFriendshipStatus(NPC, FriendshipStatus.Married);
             Dates.Remove(NPC);
             Engagements.Remove(NPC);
             Divorces.Remove(NPC);
@@ -269,7 +270,7 @@ namespace Polygamy
                 if (!spousesWithHouseData.Contains(NPC))
                 {
                     //no spouse data. let's fake it
-                    Game1.player.spouse = spousesWithHouseData[Mod.ModUtil.RNG.Next(spousesWithHouseData.Length)];
+                    Game1.player.spouse = spousesWithHouseData[Modworks.RNG.Next(spousesWithHouseData.Length)];
                     Game1.getFarm().addSpouseOutdoorArea(Game1.player.spouse);
                     Utility.getHomeOfFarmer(Game1.player).showSpouseRoom();
                     LastSpouseRoom = Game1.player.spouse;
@@ -281,7 +282,7 @@ namespace Polygamy
                     Utility.getHomeOfFarmer(Game1.player).showSpouseRoom();
                     LastSpouseRoom = NPC;
                 }
-                Mod.Instance.Monitor.Log("CHANGING SPOUSE ROOM TO " + LastSpouseRoom);
+                Modworks.Log.Debug("CHANGING SPOUSE ROOM TO " + LastSpouseRoom);
             }
         }
 
@@ -329,7 +330,7 @@ namespace Polygamy
                     }
                 }
                 if (birthday) return result;
-                return Spouses.ToArray()[Mod.ModUtil.RNG.Next(Spouses.Count)];
+                return Spouses.ToArray()[Modworks.RNG.Next(Spouses.Count)];
             } else return PrimarySpouse; //nullcheck the return pls
         }
 
@@ -341,8 +342,8 @@ namespace Polygamy
                 StorePrimarySpouse();
                 swap = true;
             }
-            Mod.ModUtil.SetFriendshipPoints(NPC, 0);
-            Mod.ModUtil.SetFriendshipStatus(NPC, FriendshipStatus.Divorced);
+            Modworks.Player.SetFriendshipPoints(NPC, 0);
+            Modworks.Player.SetFriendshipStatus(NPC, FriendshipStatus.Divorced);
             Dates.Remove(NPC);
             Engagements.Remove(NPC);
             Spouses.Remove(NPC);
@@ -474,24 +475,24 @@ namespace Polygamy
             DateableNPCs.Clear();
 
             //populate dateable, marryable
-            var npcs = Mod.ModUtil.GetAllCharacterNames(true);
+            var npcs = Modworks.NPCs.GetAllCharacterNames(true);
             foreach(var npc in npcs)
             {
                 var status = CheckStatusProper(npc);
                 if (status == RelationshipStatus.DEFAULT)
                 {
                     DateableNPCs.Add(Game1.getCharacterFromName(npc));
-                    Mod.Instance.Monitor.Log("found dateable NPC: " + npc);
+                    Modworks.Log.Trace("found dateable NPC: " + npc);
                     continue;
                 } else if (status == RelationshipStatus.DATING)
                 {
                     MarryableNPCs.Add(Game1.getCharacterFromName(npc));
-                    Mod.Instance.Monitor.Log("found marryable NPC: " + npc);
+                    Modworks.Log.Trace("found marryable NPC: " + npc);
                 }    
             }
-            Mod.Instance.Monitor.Log("Scanned " + npcs.Count + " NPCs.");
-            Mod.Instance.Monitor.Log("Found " + DateableNPCs.Count + " date-ready NPCs.");
-            Mod.Instance.Monitor.Log("Found " + MarryableNPCs.Count + " marry-ready NPCs.");
+            Modworks.Log.Debug("Scanned " + npcs.Count + " NPCs.");
+            Modworks.Log.Debug("Found " + DateableNPCs.Count + " date-ready NPCs.");
+            Modworks.Log.Debug("Found " + MarryableNPCs.Count + " marry-ready NPCs.");
         }
 
         public enum RelationshipStatus
